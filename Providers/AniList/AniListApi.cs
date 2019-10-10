@@ -136,11 +136,8 @@ bannerImage
             {
                 RequestContent = body.AsMemory(),
                 Url = "https://graphql.anilist.co/",
-                LogErrorResponseBody = true,
-                LogResponse = true,
-                LogRequest = true,
                 RequestContentType = "application/json",
-                EnableKeepAlive = true,
+                TimeoutMs = 30000,
                 CancellationToken = cancellationToken
             };
 
