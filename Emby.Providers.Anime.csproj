@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>netstandard2.0</TargetFramework>
+        <AssemblyVersion>1.0.0.0</AssemblyVersion>
+        <FileVersion>1.0.0.0</FileVersion>
+    </PropertyGroup>
+    <ItemGroup>
+        <PackageReference Include="MediaBrowser.Server.Core" Version="4.2.0.40" />
+        <PackageReference Include="System.Memory" Version="4.5.3" />
+    </ItemGroup>
+    <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+        <Exec Command="xcopy $(TargetPath) %AppData%\Emby-Server\programdata\plugins\ /y" />
+    </Target>
+</Project>
