@@ -23,6 +23,7 @@ namespace Emby.Providers.Anime.Providers.AniList.Models
     public class Media
     {
         public int Id { get; set; }
+        public int IdMal { get; set; }
         public Title Title { get; set; }
         public CoverImage CoverImage { get; set; }
         public int AverageScore { get; set; }

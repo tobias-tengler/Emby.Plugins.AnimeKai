@@ -16,18 +16,18 @@ using MediaBrowser.Model.Serialization;
 
 namespace Emby.Providers.Anime.Providers
 {
-    public class AniListImageProvider : IRemoteImageProvider
+    public class MyAnimeListImageProvider : IRemoteImageProvider
     {
         private readonly IHttpClient _httpClient;
-        private readonly AniListApi _api;
+        private readonly MyAnimeListApi _api;
 
-        public AniListImageProvider(IHttpClient httpClient, IJsonSerializer serializer)
+        public MyAnimeListImageProvider(IHttpClient httpClient, IJsonSerializer serializer)
         {
             _httpClient = httpClient;
-            _api = new AniListApi(httpClient, serializer);
+            _api = new MyAnimeListApi(httpClient, serializer);
         }
 
-        public string Name => AniListExternalId.ProviderName;
+        public string Name => MyAnimeListExternalId.ProviderName;
 
         public Task<HttpResponseInfo> GetImageResponse(string url, CancellationToken cancellationToken)
         {
@@ -48,30 +48,17 @@ namespace Emby.Providers.Anime.Providers
 
             if (images == null || images.Count < 0) throw new InvalidOperationException("No Images found for Id: " + id);
 
-            var results = new List<RemoteImageInfo>();
-
-            if (images.TryGetValue(ImageType.Primary, out var primaryPath))
-                results.Add(new RemoteImageInfo
-                {
-                    Url = primaryPath,
-                    Type = ImageType.Primary,
-                    ProviderName = Name
-                });
-
-            if (images.TryGetValue(ImageType.Banner, out var bannerPath))
-                results.Add(new RemoteImageInfo
-                {
-                    Url = bannerPath,
-                    Type = ImageType.Banner,
-                    ProviderName = Name
-                });
-
-            return results;
+            return images.Select(i => new RemoteImageInfo
+            {
+                Url = i.Large,
+                Type = ImageType.Primary,
+                ProviderName = Name
+            });
         }
 
         public IEnumerable<ImageType> GetSupportedImages(BaseItem item)
         {
-            return new[] { ImageType.Primary, ImageType.Banner };
+            return new[] { ImageType.Primary };
         }
 
         public bool Supports(BaseItem item)

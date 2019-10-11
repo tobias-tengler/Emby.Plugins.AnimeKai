@@ -27,6 +27,7 @@ query ($query: String!, $formats: [MediaFormat]) {
 Page(perPage: 10) {
 media(search: $query, format_in: $formats, type: ANIME) {
 id
+idMal
 title {
 romaji
 }
@@ -58,6 +59,7 @@ large
             var query = @"
 query ($id: Int!) {
 Media(id: $id, type: ANIME) {
+idMal
 title {
 romaji
 }
@@ -98,7 +100,7 @@ genres
             return result?.Data?.Media;
         }
 
-        public async Task<IDictionary<ImageType, string>> GetImageFromIdAsync(int id, CancellationToken cancellationToken)
+        public async Task<IDictionary<ImageType, string>> GetImagesFromIdAsync(int id, CancellationToken cancellationToken)
         {
             var query = @"
 query ($id: Int!) {

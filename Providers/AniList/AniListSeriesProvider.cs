@@ -110,22 +110,24 @@ namespace Emby.Providers.Anime.Providers
                 Status = media.Status == "RELEASING" ? SeriesStatus.Continuing : SeriesStatus.Ended,
                 ProviderIds = new Dictionary<string, string>
                 {
-                    { Name, media.Id.ToString() }
+                    { Name, media.Id.ToString() },
+                    { MyAnimeListExternalId.ProviderName, media.IdMal.ToString() }
                 }
             };
         }
 
-        private RemoteSearchResult GetSearchResultFromMedia(Media data)
+        private RemoteSearchResult GetSearchResultFromMedia(Media media)
         {
             return new RemoteSearchResult
             {
                 SearchProviderName = Name,
-                Name = data.Title?.Romaji,
-                ImageUrl = data.CoverImage?.Large,
-                Overview = CleanDescription(data.Description),
+                Name = media.Title?.Romaji,
+                ImageUrl = media.CoverImage?.Large,
+                Overview = CleanDescription(media.Description),
                 ProviderIds = new Dictionary<string, string>
                 {
-                    { Name, data.Id.ToString() }
+                    { Name, media.Id.ToString() },
+                    { MyAnimeListExternalId.ProviderName, media.IdMal.ToString() }
                 }
             };
         }
