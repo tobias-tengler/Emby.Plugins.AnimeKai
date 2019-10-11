@@ -5,11 +5,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using Emby.Providers.Anime.Providers.AniList.Models;
 using MediaBrowser.Common.Net;
+using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Providers;
 using MediaBrowser.Model.Entities;
-using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Providers;
 using MediaBrowser.Model.Serialization;
 
@@ -37,51 +37,68 @@ namespace Emby.Providers.Anime.Providers
             });
         }
 
+        #region Series
         public async Task<MetadataResult<Series>> GetMetadata(SeriesInfo info, CancellationToken cancellationToken)
         {
-            var results = await GetSearchResultsFromSeriesInfoAsync(info, cancellationToken);
+            var results = await GetSearchResultsFromInfoAsync(info, _seriesFormats, cancellationToken);
 
             var media = results.FirstOrDefault();
 
             if (media == null) return null;
 
+            var seriesItem = GetItemFromMedia<Series>(media);
+
+            seriesItem.Status = media.Status == "RELEASING" ? SeriesStatus.Continuing : SeriesStatus.Ended;
+
+            if (media.EndDate != null && media.EndDate.Year.HasValue && media.EndDate.Month.HasValue && media.EndDate.Day.HasValue)
+                seriesItem.EndDate = new DateTime(media.EndDate.Year.Value, media.EndDate.Month.Value, media.EndDate.Day.Value);
+
             return new MetadataResult<Series>
             {
                 HasMetadata = true,
-                Item = GetSeriesFromMedia(media)
+                Item = seriesItem
             };
         }
 
         public async Task<IEnumerable<RemoteSearchResult>> GetSearchResults(SeriesInfo searchInfo, CancellationToken cancellationToken)
         {
-            var results = await GetSearchResultsFromSeriesInfoAsync(searchInfo, cancellationToken);
+            var results = await GetSearchResultsFromInfoAsync(searchInfo, _seriesFormats, cancellationToken);
 
             return results.Select(GetSearchResultFromMedia);
         }
+        #endregion
 
+        #region Movie
         public async Task<MetadataResult<Movie>> GetMetadata(MovieInfo info, CancellationToken cancellationToken)
         {
-            var results = await GetSearchResultsFromMovieInfoAsync(info, cancellationToken);
+            var results = await GetSearchResultsFromInfoAsync(info, _movieFormats, cancellationToken);
 
             var media = results.FirstOrDefault();
 
             if (media == null) return null;
 
+            var movieItem = GetItemFromMedia<Movie>(media);
+
             return new MetadataResult<Movie>
             {
                 HasMetadata = true,
-                Item = GetMovieFromMedia(media)
+                Item = movieItem
             };
         }
 
         public async Task<IEnumerable<RemoteSearchResult>> GetSearchResults(MovieInfo searchInfo, CancellationToken cancellationToken)
         {
-            var results = await GetSearchResultsFromMovieInfoAsync(searchInfo, cancellationToken);
+            var results = await GetSearchResultsFromInfoAsync(searchInfo, _movieFormats, cancellationToken);
 
             return results.Select(GetSearchResultFromMedia);
         }
+        #endregion
 
-        private async Task<List<Media>> GetSearchResultsFromSeriesInfoAsync(SeriesInfo info, CancellationToken cancellationToken)
+        #region Helper
+        private readonly List<string> _seriesFormats = new List<string> { "TV", "TV_SHORT", "ONA" };
+        private readonly List<string> _movieFormats = new List<string> { "MOVIE" };
+
+        private async Task<List<Media>> GetSearchResultsFromInfoAsync(ItemLookupInfo info, IEnumerable<string> formats, CancellationToken cancellationToken)
         {
             var results = new List<Media>();
 
@@ -99,86 +116,22 @@ namespace Emby.Providers.Anime.Providers
 
             if (!string.IsNullOrEmpty(info.Name))
             {
-                var searchResults = await _api.SearchAsync(info.Name, new List<string> { "TV", "TV_SHORT", "ONA" }, cancellationToken);
+                var searchResults = await _api.SearchAsync(info.Name, formats, cancellationToken);
 
                 if (searchResults?.Count > 0)
-                {
-                    foreach (var searchResult in searchResults)
-                    {
-                        results.Add(searchResult);
-                    }
-                }
+                    results.AddRange(searchResults);
             }
 
             return results;
         }
 
-        private async Task<List<Media>> GetSearchResultsFromMovieInfoAsync(MovieInfo info, CancellationToken cancellationToken)
-        {
-            var results = new List<Media>();
-
-            if (info.ProviderIds.TryGetValue(Name, out var rawId) && int.TryParse(rawId, out var id))
-            {
-                var media = await _api.GetFromIdAsync(id, cancellationToken);
-
-                if (media != null)
-                {
-                    results.Add(media);
-
-                    return results;
-                }
-            }
-
-            if (!string.IsNullOrEmpty(info.Name))
-            {
-                var searchResults = await _api.SearchAsync(info.Name, new List<string> { "MOVIE" }, cancellationToken);
-
-                if (searchResults?.Count > 0)
-                {
-                    foreach (var searchResult in searchResults)
-                    {
-                        results.Add(searchResult);
-                    }
-                }
-            }
-
-            return results;
-        }
-
-        private Series GetSeriesFromMedia(Media media)
-        {
-            DateTime? endDate = null, startDate = null;
-            if (media.StartDate != null)
-                startDate = new DateTime(media.StartDate.Year, media.StartDate.Month, media.StartDate.Day);
-
-            if (media.EndDate != null)
-                endDate = new DateTime(media.EndDate.Year, media.EndDate.Month, media.EndDate.Day);
-
-            return new Series
-            {
-                Name = media.Title?.Romaji,
-                Overview = CleanDescription(media.Description),
-                CommunityRating = (float)media.AverageScore / 10,
-                Genres = media.Genres?.ToArray(),
-                EndDate = endDate,
-                PremiereDate = startDate,
-                ProductionYear = startDate?.Year,
-                Status = media.Status == "RELEASING" ? SeriesStatus.Continuing : SeriesStatus.Ended,
-                ProviderIds = new Dictionary<string, string>
-                {
-                    { Name, media.Id.ToString() },
-                    { MyAnimeListExternalId.ProviderName, media.IdMal.ToString() }
-                }
-            };
-        }
-
-        private Movie GetMovieFromMedia(Media media)
+        private T GetItemFromMedia<T>(Media media) where T : BaseItem, new()
         {
             DateTime? startDate = null;
-            if (media.StartDate != null)
-                startDate = new DateTime(media.StartDate.Year, media.StartDate.Month, media.StartDate.Day);
+            if (media.StartDate != null && media.StartDate.Year.HasValue && media.StartDate.Month.HasValue && media.StartDate.Day.HasValue)
+                startDate = new DateTime(media.StartDate.Year.Value, media.StartDate.Month.Value, media.StartDate.Day.Value);
 
-            return new Movie
+            return new T
             {
                 Name = media.Title?.Romaji,
                 Overview = CleanDescription(media.Description),
@@ -229,5 +182,6 @@ namespace Emby.Providers.Anime.Providers
 
             return description;
         }
+        #endregion
     }
 }
