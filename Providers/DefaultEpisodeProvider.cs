@@ -7,7 +7,7 @@ using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Providers;
 using MediaBrowser.Model.Providers;
 
-namespace Emby.Providers.Anime.Providers
+namespace Emby.Plugins.AnimeKai.Providers
 {
     public class DefaultEpisodeProvider : IRemoteMetadataProvider<Episode, EpisodeInfo>
     {

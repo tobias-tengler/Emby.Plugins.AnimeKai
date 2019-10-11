@@ -10,11 +10,10 @@ using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Providers;
 using MediaBrowser.Model.Configuration;
 using MediaBrowser.Model.Entities;
-using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Providers;
 using MediaBrowser.Model.Serialization;
 
-namespace Emby.Providers.Anime.Providers
+namespace Emby.Plugins.AnimeKai.Providers.MyAnimeList
 {
     public class MyAnimeListImageProvider : IRemoteImageProvider
     {

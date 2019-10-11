@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Emby.Providers.Anime.Providers.MyAnimeList.Models
+namespace Emby.Plugins.AnimeKai.Providers.MyAnimeList
 {
     public class Genre
     {

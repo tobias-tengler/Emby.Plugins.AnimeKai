@@ -1,14 +1,10 @@
 using System.Collections.Generic;
-using System.IO;
-using System.IO.Compression;
 using System.Threading;
 using System.Threading.Tasks;
-using Emby.Providers.Anime.Providers.MyAnimeList.Models;
 using MediaBrowser.Common.Net;
-using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Serialization;
 
-namespace Emby.Providers.Anime.Providers
+namespace Emby.Plugins.AnimeKai.Providers.MyAnimeList
 {
     public class MyAnimeListApi
     {

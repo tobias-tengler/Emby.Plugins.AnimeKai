@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Emby.Providers.Anime.Providers.AniList.Models
+namespace Emby.Plugins.AnimeKai.Providers.AniList
 {
     public class Page
     {

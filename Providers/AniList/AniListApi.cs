@@ -2,12 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Emby.Providers.Anime.Providers.AniList.Models;
 using MediaBrowser.Common.Net;
 using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.Serialization;
 
-namespace Emby.Providers.Anime.Providers
+namespace Emby.Plugins.AnimeKai.Providers.AniList
 {
     public class AniListApi
     {
