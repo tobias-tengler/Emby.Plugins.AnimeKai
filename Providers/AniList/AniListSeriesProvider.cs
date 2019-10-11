@@ -40,7 +40,7 @@ namespace Emby.Plugins.AnimeKai.Providers.AniList
         #region Series
         public async Task<MetadataResult<Series>> GetMetadata(SeriesInfo info, CancellationToken cancellationToken)
         {
-            var results = await GetSearchResultsFromInfoAsync(info, _seriesFormats, cancellationToken);
+            var results = await GetSearchResultsFromInfoAsync(info, _seriesFormats, cancellationToken).ConfigureAwait(false);
 
             var media = results.FirstOrDefault();
 
@@ -62,7 +62,7 @@ namespace Emby.Plugins.AnimeKai.Providers.AniList
 
         public async Task<IEnumerable<RemoteSearchResult>> GetSearchResults(SeriesInfo searchInfo, CancellationToken cancellationToken)
         {
-            var results = await GetSearchResultsFromInfoAsync(searchInfo, _seriesFormats, cancellationToken);
+            var results = await GetSearchResultsFromInfoAsync(searchInfo, _seriesFormats, cancellationToken).ConfigureAwait(false);
 
             return results.Select(GetSearchResultFromMedia);
         }
@@ -71,7 +71,7 @@ namespace Emby.Plugins.AnimeKai.Providers.AniList
         #region Movie
         public async Task<MetadataResult<Movie>> GetMetadata(MovieInfo info, CancellationToken cancellationToken)
         {
-            var results = await GetSearchResultsFromInfoAsync(info, _movieFormats, cancellationToken);
+            var results = await GetSearchResultsFromInfoAsync(info, _movieFormats, cancellationToken).ConfigureAwait(false);
 
             var media = results.FirstOrDefault();
 
@@ -88,7 +88,7 @@ namespace Emby.Plugins.AnimeKai.Providers.AniList
 
         public async Task<IEnumerable<RemoteSearchResult>> GetSearchResults(MovieInfo searchInfo, CancellationToken cancellationToken)
         {
-            var results = await GetSearchResultsFromInfoAsync(searchInfo, _movieFormats, cancellationToken);
+            var results = await GetSearchResultsFromInfoAsync(searchInfo, _movieFormats, cancellationToken).ConfigureAwait(false);
 
             return results.Select(GetSearchResultFromMedia);
         }
@@ -104,7 +104,7 @@ namespace Emby.Plugins.AnimeKai.Providers.AniList
 
             if (info.ProviderIds.TryGetValue(Name, out var rawId) && int.TryParse(rawId, out var id))
             {
-                var media = await _api.GetFromIdAsync(id, cancellationToken);
+                var media = await _api.GetFromIdAsync(id, cancellationToken).ConfigureAwait(false);
 
                 if (media != null)
                 {
@@ -116,7 +116,7 @@ namespace Emby.Plugins.AnimeKai.Providers.AniList
 
             if (!string.IsNullOrEmpty(info.Name))
             {
-                var searchResults = await _api.SearchAsync(info.Name, formats, cancellationToken);
+                var searchResults = await _api.SearchAsync(info.Name, formats, cancellationToken).ConfigureAwait(false);
 
                 if (searchResults?.Count > 0)
                     results.AddRange(searchResults);

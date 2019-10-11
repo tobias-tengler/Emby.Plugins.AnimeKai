@@ -21,7 +21,77 @@ namespace Emby.Plugins.AnimeKai.Providers.AniList
 
         public async Task<List<Media>> SearchAsync(string name, IEnumerable<string> formats, CancellationToken cancellationToken)
         {
-            var query = @"
+            var body = _serializer.SerializeToString(new
+            {
+                query = SearchQuery,
+                variables = new
+                {
+                    query = name,
+                    formats
+                }
+            });
+
+            var result = await FetchDataAsync<Root>(body, cancellationToken).ConfigureAwait(false);
+
+            return result?.Data?.Page?.Media;
+        }
+
+        public async Task<Media> GetFromIdAsync(int id, CancellationToken cancellationToken)
+        {
+            var body = _serializer.SerializeToString(new
+            {
+                query = MediaQuery,
+                variables = new
+                {
+                    id
+                }
+            });
+
+            var result = await FetchDataAsync<Root>(body, cancellationToken).ConfigureAwait(false);
+
+            return result?.Data?.Media;
+        }
+
+        public async Task<IDictionary<ImageType, string>> GetImagesFromIdAsync(int id, CancellationToken cancellationToken)
+        {
+            var body = _serializer.SerializeToString(new
+            {
+                query = ImageQuery,
+                variables = new
+                {
+                    id
+                }
+            });
+
+            var result = await FetchDataAsync<Root>(body, cancellationToken).ConfigureAwait(false);
+
+            var media = result?.Data?.Media;
+
+            return new Dictionary<ImageType, string>
+            {
+                { ImageType.Primary, media.CoverImage.ExtraLarge },
+                { ImageType.Banner, media.BannerImage },
+            };
+        }
+
+        private async Task<T> FetchDataAsync<T>(string body, CancellationToken cancellationToken)
+        {
+            var options = new HttpRequestOptions
+            {
+                RequestContent = body.AsMemory(),
+                Url = "https://graphql.anilist.co/",
+                RequestContentType = "application/json",
+                TimeoutMs = 30000,
+                CancellationToken = cancellationToken
+            };
+
+            var result = await _httpClient.Post(options).ConfigureAwait(false);
+
+            return await _serializer.DeserializeFromStreamAsync<T>(result.Content).ConfigureAwait(false);
+        }
+
+        #region Queries
+        private const string SearchQuery = @"
 query ($query: String!, $formats: [MediaFormat]) {
 Page(perPage: 10) {
 media(search: $query, format_in: $formats, type: ANIME) {
@@ -38,24 +108,7 @@ large
 }
 }";
 
-            var body = _serializer.SerializeToString(new
-            {
-                query,
-                variables = new
-                {
-                    query = name,
-                    formats
-                }
-            });
-
-            var result = await FetchData<Root>(body, cancellationToken);
-
-            return result?.Data?.Page?.Media;
-        }
-
-        public async Task<Media> GetFromIdAsync(int id, CancellationToken cancellationToken)
-        {
-            var query = @"
+        private const string MediaQuery = @"
 query ($id: Int!) {
 Media(id: $id, type: ANIME) {
 idMal
@@ -85,23 +138,7 @@ genres
 }
 }";
 
-            var body = _serializer.SerializeToString(new
-            {
-                query,
-                variables = new
-                {
-                    id
-                }
-            });
-
-            var result = await FetchData<Root>(body, cancellationToken);
-
-            return result?.Data?.Media;
-        }
-
-        public async Task<IDictionary<ImageType, string>> GetImagesFromIdAsync(int id, CancellationToken cancellationToken)
-        {
-            var query = @"
+        private const string ImageQuery = @"
 query ($id: Int!) {
 Media(id: $id, type: ANIME) {
 coverImage {
@@ -111,40 +148,6 @@ extraLarge
 bannerImage
 }
 }";
-
-            var body = _serializer.SerializeToString(new
-            {
-                query,
-                variables = new
-                {
-                    id
-                }
-            });
-
-            var result = await FetchData<Root>(body, cancellationToken);
-            var media = result?.Data?.Media;
-
-            return new Dictionary<ImageType, string>
-            {
-                { ImageType.Primary, media.CoverImage.ExtraLarge },
-                { ImageType.Banner, media.BannerImage },
-            };
-        }
-
-        private async Task<T> FetchData<T>(string body, CancellationToken cancellationToken)
-        {
-            var options = new HttpRequestOptions
-            {
-                RequestContent = body.AsMemory(),
-                Url = "https://graphql.anilist.co/",
-                RequestContentType = "application/json",
-                TimeoutMs = 30000,
-                CancellationToken = cancellationToken
-            };
-
-            var result = await _httpClient.Post(options);
-
-            return await _serializer.DeserializeFromStreamAsync<T>(result.Content);
-        }
+        #endregion
     }
 }

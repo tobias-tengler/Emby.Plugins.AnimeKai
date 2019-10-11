@@ -19,17 +19,17 @@ namespace Emby.Plugins.AnimeKai.Providers.MyAnimeList
 
         public Task<MediaRoot> GetFromIdAsync(int id, CancellationToken cancellationToken)
         {
-            return FetchData<MediaRoot>($"https://api.jikan.moe/v3/anime/{id}", cancellationToken);
+            return FetchDataAsync<MediaRoot>($"https://api.jikan.moe/v3/anime/{id}", cancellationToken);
         }
 
         public async Task<List<Picture>> GetImagesFromIdAsync(int id, CancellationToken cancellationToken)
         {
-            var results = await FetchData<PictureRoot>($"https://api.jikan.moe/v3/anime/{id}/pictures", cancellationToken);
+            var results = await FetchDataAsync<PictureRoot>($"https://api.jikan.moe/v3/anime/{id}/pictures", cancellationToken).ConfigureAwait(false);
 
             return results.Pictures;
         }
 
-        private async Task<T> FetchData<T>(string url, CancellationToken cancellationToken)
+        private async Task<T> FetchDataAsync<T>(string url, CancellationToken cancellationToken)
         {
             var options = new HttpRequestOptions
             {
@@ -39,9 +39,9 @@ namespace Emby.Plugins.AnimeKai.Providers.MyAnimeList
                 DecompressionMethod = CompressionMethod.Gzip
             };
 
-            var result = await _httpClient.Get(options);
+            var result = await _httpClient.Get(options).ConfigureAwait(false);
 
-            return await _serializer.DeserializeFromStreamAsync<T>(result);
+            return await _serializer.DeserializeFromStreamAsync<T>(result).ConfigureAwait(false);
         }
     }
 }

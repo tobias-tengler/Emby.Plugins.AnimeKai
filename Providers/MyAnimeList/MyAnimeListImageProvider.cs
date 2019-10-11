@@ -43,7 +43,7 @@ namespace Emby.Plugins.AnimeKai.Providers.MyAnimeList
 
             if (string.IsNullOrEmpty(rawId) || !int.TryParse(rawId, out var id)) throw new InvalidOperationException("Failed to get Id from Media");
 
-            var images = await _api.GetImagesFromIdAsync(id, cancellationToken);
+            var images = await _api.GetImagesFromIdAsync(id, cancellationToken).ConfigureAwait(false);
 
             if (images == null || images.Count < 0) throw new InvalidOperationException("No Images found for Id: " + id);
 
