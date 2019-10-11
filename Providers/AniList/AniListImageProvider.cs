@@ -82,7 +82,7 @@ namespace Emby.Providers.Anime.Providers
 
         public bool Supports(BaseItem item)
         {
-            return item is Series || item is Season || item is Movie;
+            return item is Series || item is Movie;
         }
     }
 }

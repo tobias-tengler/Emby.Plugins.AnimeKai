@@ -5,7 +5,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Emby.Providers.Anime.Providers.AniList.Models;
 using MediaBrowser.Common.Net;
-using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Providers;
 using MediaBrowser.Model.Entities;
@@ -44,31 +43,10 @@ namespace Emby.Providers.Anime.Providers
 
             if (media == null) return null;
 
-            DateTime? endDate = null, startDate = null;
-            if (media.StartDate != null)
-                startDate = new DateTime(media.StartDate.Year, media.StartDate.Month, media.StartDate.Day);
-
-            if (media.EndDate != null)
-                endDate = new DateTime(media.EndDate.Year, media.EndDate.Month, media.EndDate.Day);
-
             return new MetadataResult<Series>
             {
                 HasMetadata = true,
-                Item = new Series
-                {
-                    Name = media.Title?.Romaji,
-                    Overview = media.Description,
-                    CommunityRating = (float)media.AverageScore / 10,
-                    Genres = media.Genres?.ToArray(),
-                    EndDate = endDate,
-                    PremiereDate = startDate,
-                    ProductionYear = startDate?.Year,
-                    Status = media.Status == "RELEASING" ? SeriesStatus.Continuing : SeriesStatus.Ended,
-                    ProviderIds = new Dictionary<string, string>
-                    {
-                        { Name, media.Id.ToString() }
-                    }
-                }
+                Item = GetSeriesFromMedia(media)
             };
         }
 
@@ -76,7 +54,7 @@ namespace Emby.Providers.Anime.Providers
         {
             var results = await Get(searchInfo, cancellationToken);
 
-            return results.Select(GetSearchResultFromData);
+            return results.Select(GetSearchResultFromMedia);
         }
 
         private async Task<List<Media>> Get(SeriesInfo info, CancellationToken cancellationToken)
@@ -111,19 +89,60 @@ namespace Emby.Providers.Anime.Providers
             return results;
         }
 
-        private RemoteSearchResult GetSearchResultFromData(Media data)
+        private Series GetSeriesFromMedia(Media media)
+        {
+            DateTime? endDate = null, startDate = null;
+            if (media.StartDate != null)
+                startDate = new DateTime(media.StartDate.Year, media.StartDate.Month, media.StartDate.Day);
+
+            if (media.EndDate != null)
+                endDate = new DateTime(media.EndDate.Year, media.EndDate.Month, media.EndDate.Day);
+
+            return new Series
+            {
+                Name = media.Title?.Romaji,
+                Overview = CleanDescription(media.Description),
+                CommunityRating = (float)media.AverageScore / 10,
+                Genres = media.Genres?.ToArray(),
+                EndDate = endDate,
+                PremiereDate = startDate,
+                ProductionYear = startDate?.Year,
+                Status = media.Status == "RELEASING" ? SeriesStatus.Continuing : SeriesStatus.Ended,
+                ProviderIds = new Dictionary<string, string>
+                {
+                    { Name, media.Id.ToString() }
+                }
+            };
+        }
+
+        private RemoteSearchResult GetSearchResultFromMedia(Media data)
         {
             return new RemoteSearchResult
             {
                 SearchProviderName = Name,
                 Name = data.Title?.Romaji,
                 ImageUrl = data.CoverImage?.Large,
-                Overview = data.Description,
+                Overview = CleanDescription(data.Description),
                 ProviderIds = new Dictionary<string, string>
                 {
                     { Name, data.Id.ToString() }
                 }
             };
+        }
+
+        private string CleanDescription(string description)
+        {
+            var sourceIndex = description.IndexOf("(Source:");
+
+            if (sourceIndex > 0)
+                description = description.Substring(0, sourceIndex);
+
+            description = description.Trim();
+
+            while (description.EndsWith("<br>"))
+                description = description.Remove(description.Length - 4).TrimEnd();
+
+            return description;
         }
     }
 }
