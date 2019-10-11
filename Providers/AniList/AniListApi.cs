@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using MediaBrowser.Common.Net;
 using MediaBrowser.Model.Entities;
+using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Serialization;
 
 namespace Emby.Plugins.AnimeKai.Providers.AniList
@@ -12,15 +13,20 @@ namespace Emby.Plugins.AnimeKai.Providers.AniList
     {
         private readonly IJsonSerializer _serializer;
         private readonly IHttpClient _httpClient;
+        private readonly ILogger _logger;
 
-        public AniListApi(IHttpClient httpClient, IJsonSerializer serializer)
+        public AniListApi(IHttpClient httpClient, IJsonSerializer serializer, ILogManager logManager)
         {
             _httpClient = httpClient;
             _serializer = serializer;
+            _logger = logManager.GetLogger(GetType().Name);
         }
 
         public async Task<List<Media>> SearchAsync(string name, IEnumerable<string> formats, CancellationToken cancellationToken)
         {
+            _logger.LogCallerInfo($"{nameof(name)}: \"{name}\"");
+            _logger.LogCallerInfo($"{nameof(formats)}: \"{string.Join(",", formats)}\"");
+
             var body = _serializer.SerializeToString(new
             {
                 query = SearchQuery,
@@ -38,6 +44,8 @@ namespace Emby.Plugins.AnimeKai.Providers.AniList
 
         public async Task<Media> GetFromIdAsync(int id, CancellationToken cancellationToken)
         {
+            _logger.LogCallerInfo($"{nameof(id)}: {id}");
+
             var body = _serializer.SerializeToString(new
             {
                 query = MediaQuery,
@@ -54,6 +62,8 @@ namespace Emby.Plugins.AnimeKai.Providers.AniList
 
         public async Task<IDictionary<ImageType, string>> GetImagesFromIdAsync(int id, CancellationToken cancellationToken)
         {
+            _logger.LogCallerInfo($"{nameof(id)}: {id}");
+
             var body = _serializer.SerializeToString(new
             {
                 query = ImageQuery,
@@ -67,15 +77,19 @@ namespace Emby.Plugins.AnimeKai.Providers.AniList
 
             var media = result?.Data?.Media;
 
+            if (media == null) return null;
+
             return new Dictionary<ImageType, string>
             {
-                { ImageType.Primary, media.CoverImage.ExtraLarge },
+                { ImageType.Primary, media.CoverImage?.ExtraLarge },
                 { ImageType.Banner, media.BannerImage },
             };
         }
 
-        private async Task<T> FetchDataAsync<T>(string body, CancellationToken cancellationToken)
+        private async Task<T> FetchDataAsync<T>(string body, CancellationToken cancellationToken) where T : class
         {
+            if (body == null) throw new ArgumentNullException(nameof(body));
+
             var options = new HttpRequestOptions
             {
                 RequestContent = body.AsMemory(),
@@ -86,6 +100,8 @@ namespace Emby.Plugins.AnimeKai.Providers.AniList
             };
 
             var result = await _httpClient.Post(options).ConfigureAwait(false);
+
+            if (result == null || result.Content == null) return null;
 
             return await _serializer.DeserializeFromStreamAsync<T>(result.Content).ConfigureAwait(false);
         }
@@ -111,6 +127,7 @@ large
         private const string MediaQuery = @"
 query ($id: Int!) {
 Media(id: $id, type: ANIME) {
+id
 idMal
 title {
 romaji

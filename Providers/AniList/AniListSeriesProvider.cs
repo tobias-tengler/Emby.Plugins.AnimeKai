@@ -12,6 +12,7 @@ using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.Providers;
 using MediaBrowser.Model.Serialization;
 using Emby.Plugins.AnimeKai.Providers.MyAnimeList;
+using MediaBrowser.Model.Logging;
 
 namespace Emby.Plugins.AnimeKai.Providers.AniList
 {
@@ -19,11 +20,13 @@ namespace Emby.Plugins.AnimeKai.Providers.AniList
     {
         private readonly IHttpClient _httpClient;
         private readonly AniListApi _api;
+        private readonly ILogger _logger;
 
-        public AniListSeriesProvider(IHttpClient httpClient, IJsonSerializer serializer)
+        public AniListSeriesProvider(IHttpClient httpClient, IJsonSerializer serializer, ILogManager logManager)
         {
             _httpClient = httpClient;
-            _api = new AniListApi(httpClient, serializer);
+            _api = new AniListApi(httpClient, serializer, logManager);
+            _logger = logManager.GetLogger(GetType().Name);
         }
 
         public string Name => AniListExternalId.ProviderName;
@@ -42,16 +45,24 @@ namespace Emby.Plugins.AnimeKai.Providers.AniList
         {
             var results = await GetSearchResultsFromInfoAsync(info, _seriesFormats, cancellationToken).ConfigureAwait(false);
 
-            var media = results.FirstOrDefault();
+            var media = results?.FirstOrDefault();
 
-            if (media == null) return null;
+            if (media == null)
+            {
+                _logger.LogCallerWarning($"No Media found for {nameof(info)}.{nameof(info.Name)}: \"{info.Name}\"");
+                return new MetadataResult<Series>();
+            }
+
+            LogMediaFound(media, info);
 
             var seriesItem = GetItemFromMedia<Series>(media);
 
             seriesItem.Status = media.Status == "RELEASING" ? SeriesStatus.Continuing : SeriesStatus.Ended;
 
-            if (media.EndDate != null && media.EndDate.Year.HasValue && media.EndDate.Month.HasValue && media.EndDate.Day.HasValue)
-                seriesItem.EndDate = new DateTime(media.EndDate.Year.Value, media.EndDate.Month.Value, media.EndDate.Day.Value);
+            int? endYear = media.EndDate?.Year, endMonth = media.EndDate?.Month, endDay = media.EndDate?.Day;
+
+            if (endYear.HasValue && endMonth.HasValue && endDay.HasValue)
+                seriesItem.EndDate = new DateTime(endYear.Value, endMonth.Value, endDay.Value);
 
             return new MetadataResult<Series>
             {
@@ -73,16 +84,20 @@ namespace Emby.Plugins.AnimeKai.Providers.AniList
         {
             var results = await GetSearchResultsFromInfoAsync(info, _movieFormats, cancellationToken).ConfigureAwait(false);
 
-            var media = results.FirstOrDefault();
+            var media = results?.FirstOrDefault();
 
-            if (media == null) return null;
+            if (media == null)
+            {
+                _logger.LogCallerWarning($"No Media found for Name: \"{info.Name}\"");
+                return new MetadataResult<Movie>();
+            }
 
-            var movieItem = GetItemFromMedia<Movie>(media);
+            LogMediaFound(media, info);
 
             return new MetadataResult<Movie>
             {
                 HasMetadata = true,
-                Item = movieItem
+                Item = GetItemFromMedia<Movie>(media)
             };
         }
 
@@ -100,10 +115,17 @@ namespace Emby.Plugins.AnimeKai.Providers.AniList
 
         private async Task<List<Media>> GetSearchResultsFromInfoAsync(ItemLookupInfo info, IEnumerable<string> formats, CancellationToken cancellationToken)
         {
+            if (info == null) throw new ArgumentNullException(nameof(info));
+
+            _logger.LogCallerInfo($"{nameof(info)}.{nameof(info.Name)}: \"{info.Name}\"");
+            _logger.LogCallerInfo($"{nameof(formats)}: \"{string.Join(",", formats)}\"");
+
             var results = new List<Media>();
 
-            if (info.ProviderIds.TryGetValue(Name, out var rawId) && int.TryParse(rawId, out var id))
+            if (info.ProviderIds != null && info.ProviderIds.TryGetValue(Name, out var rawId) && int.TryParse(rawId, out var id))
             {
+                _logger.LogCallerInfo($"Provider ({Name}) Id: {id}");
+
                 var media = await _api.GetFromIdAsync(id, cancellationToken).ConfigureAwait(false);
 
                 if (media != null)
@@ -112,43 +134,64 @@ namespace Emby.Plugins.AnimeKai.Providers.AniList
 
                     return results;
                 }
+
+                _logger.LogCallerWarning($"No Media with Provider ({Name}) Id: {id} found");
             }
+            else
+                _logger.LogCallerWarning($"No Provider ({Name}) Id found for {nameof(info)}.{nameof(info.Name)}: \"{info.Name}\"");
 
             if (!string.IsNullOrEmpty(info.Name))
             {
                 var searchResults = await _api.SearchAsync(info.Name, formats, cancellationToken).ConfigureAwait(false);
 
                 if (searchResults?.Count > 0)
+                {
                     results.AddRange(searchResults);
+                    return results;
+                }
+
+                _logger.LogCallerWarning($"No Results found for {nameof(info)}.{nameof(info.Name)}: \"{info.Name}\"");
             }
 
-            return results;
+            return new List<Media>();
         }
 
         private T GetItemFromMedia<T>(Media media) where T : BaseItem, new()
         {
-            DateTime? startDate = null;
-            if (media.StartDate != null && media.StartDate.Year.HasValue && media.StartDate.Month.HasValue && media.StartDate.Day.HasValue)
-                startDate = new DateTime(media.StartDate.Year.Value, media.StartDate.Month.Value, media.StartDate.Day.Value);
+            if (media == null) throw new ArgumentNullException(nameof(media));
 
-            return new T
+            var item = new T
             {
                 Name = media.Title?.Romaji,
                 Overview = CleanDescription(media.Description),
-                CommunityRating = (float)media.AverageScore / 10,
-                Genres = media.Genres?.ToArray(),
-                PremiereDate = startDate,
-                ProductionYear = startDate?.Year,
                 ProviderIds = new Dictionary<string, string>
                 {
                     { Name, media.Id.ToString() },
-                    { MyAnimeListExternalId.ProviderName, media.IdMal.ToString() }
+                    { MyAnimeListExternalId.ProviderName, media.IdMal?.ToString() }
                 }
             };
+
+            if (media.Genres?.Count > 0)
+                item.Genres = media.Genres.ToArray();
+
+            int? startYear = media.StartDate?.Year, startMonth = media.StartDate?.Month, startDay = media.StartDate?.Day;
+
+            if (startYear.HasValue && startMonth.HasValue && startDay.HasValue)
+            {
+                item.PremiereDate = new DateTime(startYear.Value, startMonth.Value, startDay.Value);
+                item.ProductionYear = startYear.Value;
+            }
+
+            if (media.AverageScore.HasValue)
+                item.CommunityRating = media.AverageScore / 10;
+
+            return item;
         }
 
         private RemoteSearchResult GetSearchResultFromMedia(Media media)
         {
+            if (media == null) throw new ArgumentNullException(nameof(media));
+
             return new RemoteSearchResult
             {
                 SearchProviderName = Name,
@@ -158,13 +201,23 @@ namespace Emby.Plugins.AnimeKai.Providers.AniList
                 ProviderIds = new Dictionary<string, string>
                 {
                     { Name, media.Id.ToString() },
-                    { MyAnimeListExternalId.ProviderName, media.IdMal.ToString() }
+                    { MyAnimeListExternalId.ProviderName, media.IdMal?.ToString() }
                 }
             };
         }
 
+        private void LogMediaFound(Media media, ItemLookupInfo info)
+        {
+            _logger.LogCallerInfo($"Media found for {nameof(info)}.{nameof(info.Name)}: \"{info.Name}\":");
+            _logger.LogCallerInfo($"{nameof(media.Title)}: \"{media.Title?.Romaji}\"");
+            _logger.LogCallerInfo($"{nameof(media.Id)}: {media.Id}");
+            _logger.LogCallerInfo($"{nameof(media.IdMal)}: {media.IdMal}");
+        }
+
         private string CleanDescription(string description)
         {
+            if (string.IsNullOrEmpty(description)) return string.Empty;
+
             var sourceIndex = description.IndexOf("(Source:");
 
             if (sourceIndex > 0)

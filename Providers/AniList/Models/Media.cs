@@ -23,10 +23,10 @@ namespace Emby.Plugins.AnimeKai.Providers.AniList
     public class Media
     {
         public int Id { get; set; }
-        public int IdMal { get; set; }
+        public int? IdMal { get; set; }
         public Title Title { get; set; }
         public CoverImage CoverImage { get; set; }
-        public int AverageScore { get; set; }
+        public float? AverageScore { get; set; }
         public Date StartDate { get; set; }
         public Date EndDate { get; set; }
         public string BannerImage { get; set; }

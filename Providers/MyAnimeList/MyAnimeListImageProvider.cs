@@ -10,6 +10,7 @@ using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Providers;
 using MediaBrowser.Model.Configuration;
 using MediaBrowser.Model.Entities;
+using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Providers;
 using MediaBrowser.Model.Serialization;
 
@@ -19,11 +20,13 @@ namespace Emby.Plugins.AnimeKai.Providers.MyAnimeList
     {
         private readonly IHttpClient _httpClient;
         private readonly MyAnimeListApi _api;
+        private readonly ILogger _logger;
 
-        public MyAnimeListImageProvider(IHttpClient httpClient, IJsonSerializer serializer)
+        public MyAnimeListImageProvider(IHttpClient httpClient, IJsonSerializer serializer, ILogManager logManager)
         {
             _httpClient = httpClient;
-            _api = new MyAnimeListApi(httpClient, serializer);
+            _api = new MyAnimeListApi(httpClient, serializer, logManager);
+            _logger = logManager.GetLogger(GetType().Name);
         }
 
         public string Name => MyAnimeListExternalId.ProviderName;
@@ -39,13 +42,27 @@ namespace Emby.Plugins.AnimeKai.Providers.MyAnimeList
 
         public async Task<IEnumerable<RemoteImageInfo>> GetImages(BaseItem item, LibraryOptions libraryOptions, CancellationToken cancellationToken)
         {
+            if (item == null) throw new ArgumentNullException(nameof(item));
+
+            _logger.LogCallerInfo($"{nameof(item)}.{nameof(item.Name)}: \"{item.Name}\"");
+
             var rawId = item.GetProviderId(Name);
 
-            if (string.IsNullOrEmpty(rawId) || !int.TryParse(rawId, out var id)) throw new InvalidOperationException("Failed to get Id from Media");
+            if (string.IsNullOrEmpty(rawId) || !int.TryParse(rawId, out var id))
+            {
+                _logger.LogCallerWarning($"No Provider ({Name}) Id found for {nameof(item)}.{nameof(item.Name)}: \"{item.Name}\"");
+                return new List<RemoteImageInfo>();
+            }
+
+            _logger.LogCallerInfo($"Id: {id.ToString()}");
 
             var images = await _api.GetImagesFromIdAsync(id, cancellationToken).ConfigureAwait(false);
 
-            if (images == null || images.Count < 0) throw new InvalidOperationException("No Images found for Id: " + id);
+            if (images == null || images.Count < 1)
+            {
+                _logger.LogCallerWarning($"No Images found for Id: {id}");
+                return new List<RemoteImageInfo>();
+            }
 
             return images.Select(i => new RemoteImageInfo
             {
