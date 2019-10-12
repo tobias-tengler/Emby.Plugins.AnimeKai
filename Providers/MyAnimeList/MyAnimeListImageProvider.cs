@@ -16,7 +16,7 @@ using MediaBrowser.Model.Serialization;
 
 namespace Emby.Plugins.AnimeKai.Providers.MyAnimeList
 {
-    public class MyAnimeListImageProvider : IRemoteImageProvider
+    public class MyAnimeListImageProvider : IRemoteImageProvider, IHasOrder
     {
         private readonly IHttpClient _httpClient;
         private readonly MyAnimeListApi _api;
@@ -30,6 +30,8 @@ namespace Emby.Plugins.AnimeKai.Providers.MyAnimeList
         }
 
         public string Name => MyAnimeListExternalId.ProviderName;
+
+        public int Order => 1;
 
         public Task<HttpResponseInfo> GetImageResponse(string url, CancellationToken cancellationToken)
         {

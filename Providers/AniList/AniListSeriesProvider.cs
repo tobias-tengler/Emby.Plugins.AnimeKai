@@ -17,7 +17,7 @@ using System.Runtime.CompilerServices;
 
 namespace Emby.Plugins.AnimeKai.Providers.AniList
 {
-    public class AniListSeriesProvider : IRemoteMetadataProvider<Series, SeriesInfo>, IRemoteMetadataProvider<Movie, MovieInfo>
+    public class AniListSeriesProvider : IRemoteMetadataProvider<Series, SeriesInfo>, IRemoteMetadataProvider<Movie, MovieInfo>, IHasOrder
     {
         private readonly IHttpClient _httpClient;
         private readonly AniListApi _api;
@@ -31,6 +31,8 @@ namespace Emby.Plugins.AnimeKai.Providers.AniList
         }
 
         public string Name => AniListExternalId.ProviderName;
+
+        public int Order => 0;
 
         public Task<HttpResponseInfo> GetImageResponse(string url, CancellationToken cancellationToken)
         {
