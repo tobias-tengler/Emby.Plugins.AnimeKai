@@ -50,7 +50,7 @@ namespace Emby.Plugins.AnimeKai.Providers.MyAnimeList
 
             if (string.IsNullOrEmpty(rawId) || !int.TryParse(rawId, out var id))
             {
-                _logger.LogCallerWarning($"No Provider ({Name}) Id found for {nameof(item)}.{nameof(item.Name)}: \"{item.Name}\"");
+                _logger.LogCallerWarning($"No Id found for {nameof(item)}.{nameof(item.Name)}: \"{item.Name}\"");
                 return new List<RemoteImageInfo>();
             }
 

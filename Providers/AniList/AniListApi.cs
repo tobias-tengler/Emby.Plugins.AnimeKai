@@ -29,7 +29,7 @@ namespace Emby.Plugins.AnimeKai.Providers.AniList
 
             var body = _serializer.SerializeToString(new
             {
-                query = SearchQuery,
+                query = SearchQuery + MediaFragment,
                 variables = new
                 {
                     query = name,
@@ -48,7 +48,7 @@ namespace Emby.Plugins.AnimeKai.Providers.AniList
 
             var body = _serializer.SerializeToString(new
             {
-                query = MediaQuery,
+                query = MediaQuery + MediaFragment,
                 variables = new
                 {
                     id
@@ -111,16 +111,7 @@ namespace Emby.Plugins.AnimeKai.Providers.AniList
 query ($query: String!, $formats: [MediaFormat]) {
     Page {
         media(search: $query, format_in: $formats, type: ANIME) {
-            id
-            idMal
-            title {
-                romaji
-            }
-            description
-            coverImage {
-                large
-                extraLarge
-            }
+            ...mediaFragment
         }
     }
 }";
@@ -128,31 +119,7 @@ query ($query: String!, $formats: [MediaFormat]) {
         private const string MediaQuery = @"
 query ($id: Int!) {
     Media(id: $id, type: ANIME) {
-        id
-        idMal
-        title {
-            romaji
-        }
-        startDate {
-            year
-            month
-            day
-        }
-        endDate {
-            year
-            month
-            day
-        }
-        coverImage {
-            large
-            extraLarge
-        }
-        bannerImage
-        status
-        episodes
-        description
-        averageScore
-        genres
+        ...mediaFragment
     }
 }";
 
@@ -165,6 +132,35 @@ query ($id: Int!) {
         }
         bannerImage
     }
+}";
+
+        private const string MediaFragment = @"
+fragment mediaFragment on Media {
+  id
+  idMal
+  title {
+    romaji
+  }
+  startDate {
+    year
+    month
+    day
+  }
+  endDate {
+    year
+    month
+    day
+  }
+  coverImage {
+    large
+    extraLarge
+  }
+  bannerImage
+  status
+  episodes
+  description
+  averageScore
+  genres
 }";
         #endregion
     }

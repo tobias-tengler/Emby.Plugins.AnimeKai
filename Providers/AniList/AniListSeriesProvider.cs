@@ -125,7 +125,7 @@ namespace Emby.Plugins.AnimeKai.Providers.AniList
 
             if (info.ProviderIds != null && info.ProviderIds.TryGetValue(Name, out var rawId) && int.TryParse(rawId, out var id))
             {
-                _logger.LogCallerInfo($"Provider ({Name}) Id: {id}");
+                _logger.LogCallerInfo($"Id: {id}");
 
                 var media = await _api.GetFromIdAsync(id, cancellationToken).ConfigureAwait(false);
 
@@ -136,10 +136,10 @@ namespace Emby.Plugins.AnimeKai.Providers.AniList
                     return results;
                 }
 
-                _logger.LogCallerWarning($"No Media with Provider ({Name}) Id: {id} found");
+                _logger.LogCallerWarning($"No Media with Id: {id} found");
             }
             else
-                _logger.LogCallerWarning($"No Provider ({Name}) Id found for {nameof(info)}.{nameof(info.Name)}: \"{info.Name}\"");
+                _logger.LogCallerWarning($"No Id found for {nameof(info)}.{nameof(info.Name)}: \"{info.Name}\"");
 
             if (!string.IsNullOrEmpty(info.Name))
             {
@@ -213,7 +213,11 @@ namespace Emby.Plugins.AnimeKai.Providers.AniList
             _logger.LogCallerInfo($"{nameof(media.Id)}: {media.Id}", caller);
             _logger.LogCallerInfo($"{nameof(media.IdMal)}: {media.IdMal}", caller);
             _logger.LogCallerInfo($"{nameof(media.Title)}: \"{media.Title?.Romaji}\"", caller);
-            _logger.LogCallerInfo($"{nameof(media.Genres)}: \"{string.Join(",", media.Genres)}\"", caller);
+
+            if (media.Genres?.Count > 0)
+                _logger.LogCallerInfo($"{nameof(media.Genres)}: \"{string.Join(",", media.Genres)}\"", caller);
+            else
+                _logger.LogCallerWarning($"No {nameof(media.Genres)} found", caller);
         }
         #endregion
     }
