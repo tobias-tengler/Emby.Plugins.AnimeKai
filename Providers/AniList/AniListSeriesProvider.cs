@@ -13,6 +13,7 @@ using MediaBrowser.Model.Providers;
 using MediaBrowser.Model.Serialization;
 using Emby.Plugins.AnimeKai.Providers.MyAnimeList;
 using MediaBrowser.Model.Logging;
+using System.Runtime.CompilerServices;
 
 namespace Emby.Plugins.AnimeKai.Providers.AniList
 {
@@ -163,7 +164,7 @@ namespace Emby.Plugins.AnimeKai.Providers.AniList
             var item = new T
             {
                 Name = media.Title?.Romaji,
-                Overview = CleanDescription(media.Description),
+                Overview = Sanitizer.SanitizeDescription(media.Description),
                 ProviderIds = new Dictionary<string, string>
                 {
                     { Name, media.Id.ToString() },
@@ -197,7 +198,7 @@ namespace Emby.Plugins.AnimeKai.Providers.AniList
                 SearchProviderName = Name,
                 Name = media.Title?.Romaji,
                 ImageUrl = media.CoverImage?.Large,
-                Overview = CleanDescription(media.Description),
+                Overview = Sanitizer.SanitizeDescription(media.Description),
                 ProviderIds = new Dictionary<string, string>
                 {
                     { Name, media.Id.ToString() },
@@ -206,34 +207,12 @@ namespace Emby.Plugins.AnimeKai.Providers.AniList
             };
         }
 
-        private void LogMediaFound(Media media, ItemLookupInfo info)
+        private void LogMediaFound(Media media, ItemLookupInfo info, [CallerMemberName] string caller = null)
         {
-            _logger.LogCallerInfo($"Media found for {nameof(info)}.{nameof(info.Name)}: \"{info.Name}\":");
-            _logger.LogCallerInfo($"{nameof(media.Title)}: \"{media.Title?.Romaji}\"");
-            _logger.LogCallerInfo($"{nameof(media.Id)}: {media.Id}");
-            _logger.LogCallerInfo($"{nameof(media.IdMal)}: {media.IdMal}");
-        }
-
-        private string CleanDescription(string description)
-        {
-            if (string.IsNullOrEmpty(description)) return string.Empty;
-
-            var sourceIndex = description.IndexOf("(Source:");
-
-            if (sourceIndex > 0)
-                description = description.Substring(0, sourceIndex);
-
-            var writtenByIndex = description.IndexOf("[Written by");
-
-            if (writtenByIndex > 0)
-                description = description.Substring(0, writtenByIndex);
-
-            description = description.Replace("—", " - ").Trim();
-
-            while (description.EndsWith("<br>"))
-                description = description.Remove(description.Length - 4).TrimEnd();
-
-            return description;
+            _logger.LogCallerInfo($"Media found for {nameof(info)}.{nameof(info.Name)}: \"{info.Name}\":", caller);
+            _logger.LogCallerInfo($"{nameof(media.Title)}: \"{media.Title?.Romaji}\"", caller);
+            _logger.LogCallerInfo($"{nameof(media.Id)}: {media.Id}", caller);
+            _logger.LogCallerInfo($"{nameof(media.IdMal)}: {media.IdMal}", caller);
         }
         #endregion
     }

@@ -109,61 +109,62 @@ namespace Emby.Plugins.AnimeKai.Providers.AniList
         #region Queries
         private const string SearchQuery = @"
 query ($query: String!, $formats: [MediaFormat]) {
-Page(perPage: 10) {
-media(search: $query, format_in: $formats, type: ANIME) {
-id
-idMal
-title {
-romaji
-}
-description
-coverImage {
-large
-}
-}
-}
+    Page {
+        media(search: $query, format_in: $formats, type: ANIME) {
+            id
+            idMal
+            title {
+                romaji
+            }
+            description
+            coverImage {
+                large
+                extraLarge
+            }
+        }
+    }
 }";
 
         private const string MediaQuery = @"
 query ($id: Int!) {
-Media(id: $id, type: ANIME) {
-id
-idMal
-title {
-romaji
-}
-startDate {
-year
-month
-day
-}
-endDate {
-year
-month
-day
-}
-coverImage {
-large
-extraLarge
-}
-bannerImage
-status
-episodes
-description
-averageScore
-genres
-}
+    Media(id: $id, type: ANIME) {
+        id
+        idMal
+        title {
+            romaji
+        }
+        startDate {
+            year
+            month
+            day
+        }
+        endDate {
+            year
+            month
+            day
+        }
+        coverImage {
+            large
+            extraLarge
+        }
+        bannerImage
+        status
+        episodes
+        description
+        averageScore
+        genres
+    }
 }";
 
         private const string ImageQuery = @"
 query ($id: Int!) {
-Media(id: $id, type: ANIME) {
-coverImage {
-large
-extraLarge
-}
-bannerImage
-}
+    Media(id: $id, type: ANIME) {
+        coverImage {
+            large
+            extraLarge
+        }
+        bannerImage
+    }
 }";
         #endregion
     }
