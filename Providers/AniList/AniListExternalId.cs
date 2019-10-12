@@ -17,7 +17,7 @@ namespace Emby.Plugins.AnimeKai.Providers.AniList
 
         public bool Supports(IHasProviderIds item)
         {
-            return item is Series || item is Movie;
+            return item is Series || item is Movie || item is Season;
         }
     }
 }

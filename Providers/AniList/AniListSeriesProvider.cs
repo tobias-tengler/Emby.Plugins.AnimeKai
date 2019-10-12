@@ -46,17 +46,17 @@ namespace Emby.Plugins.AnimeKai.Providers.AniList
         #region Series
         public async Task<MetadataResult<Series>> GetMetadata(SeriesInfo info, CancellationToken cancellationToken)
         {
-            var results = await GetSearchResultsFromInfoAsync(info, _seriesFormats, cancellationToken).ConfigureAwait(false);
+            var results = await GetSearchResultsFromInfoAsync(info, SeriesFormats, cancellationToken).ConfigureAwait(false);
 
             var media = results?.FirstOrDefault();
 
             if (media == null)
             {
-                _logger.LogCallerWarning($"No Media found for {nameof(info)}.{nameof(info.Name)}: \"{info.Name}\"");
+                _logger.LogCallerWarning($"No Media found for {nameof(info.Name)}: \"{info.Name}\"");
                 return new MetadataResult<Series>();
             }
 
-            LogMediaFound(media, info);
+            LogMediaFound(media);
 
             var seriesItem = GetItemFromMedia<Series>(media);
 
@@ -76,7 +76,7 @@ namespace Emby.Plugins.AnimeKai.Providers.AniList
 
         public async Task<IEnumerable<RemoteSearchResult>> GetSearchResults(SeriesInfo searchInfo, CancellationToken cancellationToken)
         {
-            var results = await GetSearchResultsFromInfoAsync(searchInfo, _seriesFormats, cancellationToken).ConfigureAwait(false);
+            var results = await GetSearchResultsFromInfoAsync(searchInfo, SeriesFormats, cancellationToken).ConfigureAwait(false);
 
             return results.Select(GetSearchResultFromMedia);
         }
@@ -85,17 +85,17 @@ namespace Emby.Plugins.AnimeKai.Providers.AniList
         #region Movie
         public async Task<MetadataResult<Movie>> GetMetadata(MovieInfo info, CancellationToken cancellationToken)
         {
-            var results = await GetSearchResultsFromInfoAsync(info, _movieFormats, cancellationToken).ConfigureAwait(false);
+            var results = await GetSearchResultsFromInfoAsync(info, MovieFormats, cancellationToken).ConfigureAwait(false);
 
             var media = results?.FirstOrDefault();
 
             if (media == null)
             {
-                _logger.LogCallerWarning($"No Media found for Name: \"{info.Name}\"");
+                _logger.LogCallerWarning($"No Media found for {nameof(info.Name)}: \"{info.Name}\"");
                 return new MetadataResult<Movie>();
             }
 
-            LogMediaFound(media, info);
+            LogMediaFound(media);
 
             return new MetadataResult<Movie>
             {
@@ -106,22 +106,19 @@ namespace Emby.Plugins.AnimeKai.Providers.AniList
 
         public async Task<IEnumerable<RemoteSearchResult>> GetSearchResults(MovieInfo searchInfo, CancellationToken cancellationToken)
         {
-            var results = await GetSearchResultsFromInfoAsync(searchInfo, _movieFormats, cancellationToken).ConfigureAwait(false);
+            var results = await GetSearchResultsFromInfoAsync(searchInfo, MovieFormats, cancellationToken).ConfigureAwait(false);
 
             return results.Select(GetSearchResultFromMedia);
         }
         #endregion
 
         #region Helper
-        private readonly List<string> _seriesFormats = new List<string> { "TV", "TV_SHORT", "ONA" };
-        private readonly List<string> _movieFormats = new List<string> { "MOVIE" };
+        public readonly List<string> SeriesFormats = new List<string> { "TV", "TV_SHORT", "ONA" };
+        public readonly List<string> MovieFormats = new List<string> { "MOVIE" };
 
-        private async Task<List<Media>> GetSearchResultsFromInfoAsync(ItemLookupInfo info, IEnumerable<string> formats, CancellationToken cancellationToken)
+        public async Task<List<Media>> GetSearchResultsFromInfoAsync(ItemLookupInfo info, IEnumerable<string> formats, CancellationToken cancellationToken)
         {
             if (info == null) throw new ArgumentNullException(nameof(info));
-
-            _logger.LogCallerInfo($"{nameof(info)}.{nameof(info.Name)}: \"{info.Name}\"");
-            _logger.LogCallerInfo($"{nameof(formats)}: \"{string.Join(",", formats)}\"");
 
             var results = new List<Media>();
 
@@ -141,10 +138,13 @@ namespace Emby.Plugins.AnimeKai.Providers.AniList
                 _logger.LogCallerWarning($"No Media with Id: {id} found");
             }
             else
-                _logger.LogCallerWarning($"No Id found for {nameof(info)}.{nameof(info.Name)}: \"{info.Name}\"");
+                _logger.LogCallerWarning($"No Id found for {nameof(info.Name)}: \"{info.Name}\"");
 
             if (!string.IsNullOrEmpty(info.Name))
             {
+                _logger.LogCallerInfo($"{nameof(info.Name)}: \"{info.Name}\"");
+                _logger.LogCallerInfo($"{nameof(formats)}: \"{string.Join(",", formats)}\"");
+
                 var searchResults = await _api.SearchAsync(info.Name, formats, cancellationToken).ConfigureAwait(false);
 
                 if (searchResults?.Count > 0)
@@ -153,8 +153,10 @@ namespace Emby.Plugins.AnimeKai.Providers.AniList
                     return results;
                 }
 
-                _logger.LogCallerWarning($"No Results found for {nameof(info)}.{nameof(info.Name)}: \"{info.Name}\"");
+                _logger.LogCallerWarning($"No Results found for {nameof(info.Name)}: \"{info.Name}\"");
             }
+            else
+                _logger.LogCallerWarning($"No {nameof(info.Name)} found");
 
             return new List<Media>();
         }
@@ -195,7 +197,7 @@ namespace Emby.Plugins.AnimeKai.Providers.AniList
             return item;
         }
 
-        private RemoteSearchResult GetSearchResultFromMedia(Media media)
+        public RemoteSearchResult GetSearchResultFromMedia(Media media)
         {
             if (media == null) throw new ArgumentNullException(nameof(media));
 
@@ -213,9 +215,9 @@ namespace Emby.Plugins.AnimeKai.Providers.AniList
             };
         }
 
-        private void LogMediaFound(Media media, ItemLookupInfo info, [CallerMemberName] string caller = null)
+        private void LogMediaFound(Media media, [CallerMemberName] string caller = null)
         {
-            _logger.LogCallerInfo($"Media found for {nameof(info)}.{nameof(info.Name)}: \"{info.Name}\":", caller);
+            _logger.LogCallerInfo($"Media found:", caller);
             _logger.LogCallerInfo($"{nameof(media.Id)}: {media.Id}", caller);
             _logger.LogCallerInfo($"{nameof(media.IdMal)}: {media.IdMal}", caller);
             _logger.LogCallerInfo($"{nameof(media.Title)}: \"{media.Title?.Romaji}\"", caller);

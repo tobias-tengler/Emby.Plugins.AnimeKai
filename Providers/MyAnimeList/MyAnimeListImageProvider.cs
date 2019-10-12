@@ -46,13 +46,11 @@ namespace Emby.Plugins.AnimeKai.Providers.MyAnimeList
         {
             if (item == null) throw new ArgumentNullException(nameof(item));
 
-            _logger.LogCallerInfo($"{nameof(item)}.{nameof(item.Name)}: \"{item.Name}\"");
-
             var rawId = item.GetProviderId(Name);
 
             if (string.IsNullOrEmpty(rawId) || !int.TryParse(rawId, out var id))
             {
-                _logger.LogCallerWarning($"No Id found for {nameof(item)}.{nameof(item.Name)}: \"{item.Name}\"");
+                _logger.LogCallerWarning($"No Id found for {nameof(item.Name)}: \"{item.Name}\"");
                 return new List<RemoteImageInfo>();
             }
 
@@ -62,7 +60,7 @@ namespace Emby.Plugins.AnimeKai.Providers.MyAnimeList
 
             if (images == null || images.Count < 1)
             {
-                _logger.LogCallerWarning($"No Images found for Id: {id}");
+                _logger.LogCallerWarning($"No Images found for Id: {id} / {nameof(item.Name)}: \"{item.Name}\"");
                 return new List<RemoteImageInfo>();
             }
 
@@ -81,7 +79,7 @@ namespace Emby.Plugins.AnimeKai.Providers.MyAnimeList
 
         public bool Supports(BaseItem item)
         {
-            return item is Series || item is Movie;
+            return item is Series || item is Movie || item is Season;
         }
     }
 }
