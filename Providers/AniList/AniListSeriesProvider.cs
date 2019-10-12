@@ -210,9 +210,10 @@ namespace Emby.Plugins.AnimeKai.Providers.AniList
         private void LogMediaFound(Media media, ItemLookupInfo info, [CallerMemberName] string caller = null)
         {
             _logger.LogCallerInfo($"Media found for {nameof(info)}.{nameof(info.Name)}: \"{info.Name}\":", caller);
-            _logger.LogCallerInfo($"{nameof(media.Title)}: \"{media.Title?.Romaji}\"", caller);
             _logger.LogCallerInfo($"{nameof(media.Id)}: {media.Id}", caller);
             _logger.LogCallerInfo($"{nameof(media.IdMal)}: {media.IdMal}", caller);
+            _logger.LogCallerInfo($"{nameof(media.Title)}: \"{media.Title?.Romaji}\"", caller);
+            _logger.LogCallerInfo($"{nameof(media.Genres)}: \"{string.Join(",", media.Genres)}\"", caller);
         }
         #endregion
     }

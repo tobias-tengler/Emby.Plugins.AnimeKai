@@ -1,3 +1,6 @@
+using System;
+using System.Text.RegularExpressions;
+
 namespace Emby.Plugins.AnimeKai.Providers
 {
     public static class Sanitizer
@@ -10,42 +13,23 @@ namespace Emby.Plugins.AnimeKai.Providers
                                      .TakeUpTo("[Written by")
                                      .TakeUpTo("<i>Note:");
 
-            description = description.Replace("—", " - ");
+            description = description.Replace("—", " - ")
+                                     .Replace("<br>", Environment.NewLine)
+                                     .Replace("<br/>", Environment.NewLine)
+                                     .Replace("<br></br>", Environment.NewLine);
 
-            description = description.Trim().TrimBreaksFromEnd();
+            description = Regex.Replace(description, "[\r\n]{2,}", Environment.NewLine);
 
-            return description;
-        }
-
-        private static string TrimBreaksFromEnd(this string input)
-        {
-            while (true)
-            {
-                if (input.EndsWith("<br>"))
-                    input = input.RemoveFromEnd("<br>");
-                else if (input.EndsWith("<br/>"))
-                    input = input.RemoveFromEnd("<br/>");
-                else if (input.EndsWith("<br></br>"))
-                    input = input.RemoveFromEnd("<br></br>");
-                else
-                    break;
-            }
-
-            return input;
-        }
-
-        private static string RemoveFromEnd(this string input, string element)
-        {
-            return input.Remove(input.Length - element.Length).TrimEnd();
+            return description.Trim();
         }
 
         private static string TakeUpTo(this string input, string element)
         {
-            var sourceIndex = input.IndexOf(element);
+            var elementIndex = input.IndexOf(element);
 
-            if (sourceIndex <= 0) return input;
+            if (elementIndex <= 0) return input;
 
-            return input.Substring(0, sourceIndex);
+            return input.Substring(0, elementIndex);
         }
     }
 }
