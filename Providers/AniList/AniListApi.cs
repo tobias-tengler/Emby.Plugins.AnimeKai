@@ -161,6 +161,14 @@ fragment mediaFragment on Media {
   description
   averageScore
   genres
+  studios {
+    edges {
+      node {
+        name
+        isAnimationStudio
+      }
+    }
+  }
 }";
         #endregion
     }

@@ -20,6 +20,22 @@ namespace Emby.Plugins.AnimeKai.Providers.AniList
         public int? Day { get; set; }
     }
 
+    public class StudioNode
+    {
+        public string Name { get; set; }
+        public bool IsAnimationStudio { get; set; }
+    }
+
+    public class StudioEdge
+    {
+        public StudioNode Node { get; set; }
+    }
+
+    public class StudioRoot
+    {
+        public List<StudioEdge> Edges { get; set; }
+    }
+
     public class Media
     {
         public int Id { get; set; }
@@ -33,5 +49,6 @@ namespace Emby.Plugins.AnimeKai.Providers.AniList
         public string Status { get; set; }
         public string Description { get; set; }
         public List<string> Genres { get; set; }
+        public StudioRoot Studios { get; set; }
     }
 }

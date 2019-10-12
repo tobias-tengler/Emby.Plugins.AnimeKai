@@ -177,6 +177,10 @@ namespace Emby.Plugins.AnimeKai.Providers.AniList
             if (media.Genres?.Count > 0)
                 item.Genres = media.Genres.ToArray();
 
+            if (media.Studios?.Edges?.Count > 0)
+                item.Studios = media.Studios.Edges.Where(i => i.Node?.IsAnimationStudio == true)
+                                                  .Select(i => i.Node.Name).ToArray();
+
             int? startYear = media.StartDate?.Year, startMonth = media.StartDate?.Month, startDay = media.StartDate?.Day;
 
             if (startYear.HasValue && startMonth.HasValue && startDay.HasValue)
