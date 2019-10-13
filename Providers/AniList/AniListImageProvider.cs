@@ -73,11 +73,11 @@ namespace Emby.Plugins.AnimeKai.Providers.AniList
                     ProviderName = Name
                 });
 
-            if (images.TryGetValue(ImageType.Banner, out var bannerPath))
+            if (images.TryGetValue(ImageType.Backdrop, out var bannerPath))
                 results.Add(new RemoteImageInfo
                 {
                     Url = bannerPath,
-                    Type = ImageType.Banner,
+                    Type = ImageType.Backdrop,
                     ProviderName = Name
                 });
 
@@ -86,7 +86,7 @@ namespace Emby.Plugins.AnimeKai.Providers.AniList
 
         public IEnumerable<ImageType> GetSupportedImages(BaseItem item)
         {
-            return new[] { ImageType.Primary, ImageType.Banner };
+            return new[] { ImageType.Primary, ImageType.Backdrop };
         }
 
         public bool Supports(BaseItem item)
