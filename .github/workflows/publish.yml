@@ -1,0 +1,22 @@
+name: Publish
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest    
+    env: 
+        DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
+        DOTNET_CLI_TELEMETRY_OPTOUT: 1
+    steps:
+    - uses: actions/checkout@v1
+    - uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: 3.0.100
+    - run: dotnet publish -c Release -o out
+    - uses: actions/upload-artifact@v1
+      with:
+        name: Emby.Plugins.AnimeKai
+        path: out/Emby.Plugins.AnimeKai.dll
