@@ -89,8 +89,6 @@ namespace Emby.Plugins.AnimeKai.Providers.AniList
             }
             else
             {
-                season.Name += $" (Unidentified: {info.Name})";
-
                 // todo log series name here for easier reckoning
                 _logger.LogCallerWarning($"No Metadata found for Season: \"{info.Name}\" from Series (Id: {seriesId})");
             }
