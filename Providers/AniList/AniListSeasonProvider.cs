@@ -1,6 +1,6 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using MediaBrowser.Common.Net;
@@ -8,7 +8,6 @@ using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Providers;
 using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Providers;
-using MediaBrowser.Model.Serialization;
 
 namespace Emby.Plugins.AnimeKai.Providers.AniList
 {
@@ -42,12 +41,17 @@ namespace Emby.Plugins.AnimeKai.Providers.AniList
         {
             info.SeriesProviderIds.TryGetValue(Name, out var seriesId);
 
+            if (!string.IsNullOrEmpty(seriesId))
+                _logger.LogCallerInfo("Series Id: " + seriesId);
+            if (!string.IsNullOrEmpty(info.SeriesName))
+                _logger.LogCallerInfo("Series Name: " + info.SeriesName);
+
             MetadataResult<Series> seriesResult = null;
             var seriesInfo = new SeriesInfo();
 
             if (info.ProviderIds.TryGetValue(Name, out var seasonId))
             {
-                _logger.LogCallerInfo("Id: " + seasonId);
+                _logger.LogCallerInfo("Season Id: " + seasonId);
 
                 seriesInfo.ProviderIds.Add(Name, seasonId);
 
@@ -55,9 +59,7 @@ namespace Emby.Plugins.AnimeKai.Providers.AniList
             }
             else if (info.IndexNumber == 1 && !string.IsNullOrEmpty(seriesId))
             {
-                // todo load existing series metadata instead of asking the api again
-
-                _logger.LogCallerInfo("Series Id: " + seriesId);
+                // todo load existing series metadata instead of querying the API again
 
                 seriesInfo.ProviderIds.Add(Name, seriesId);
 
@@ -65,16 +67,30 @@ namespace Emby.Plugins.AnimeKai.Providers.AniList
             }
             else
             {
-                // todo get series name and append season number, then search api
+                seriesInfo.Name = $"{info.SeriesName} {info.IndexNumber}";
+
+                seriesResult = await _seriesProvider.GetMetadata(seriesInfo, cancellationToken).ConfigureAwait(false);
             }
+
+
+            string seasonName = null;
+
+            var nameMatch = Regex.Match(info.Name, @"\((.+)\)");
+
+            if (nameMatch.Success)
+                seasonName = nameMatch.Groups[1]?.Value;
+            else
+                seasonName = $"Season {info.IndexNumber}";
 
             var season = new Season
             {
                 IndexNumber = info.IndexNumber,
-                Name = $"Season {info.IndexNumber}"
+                Name = seasonName
             };
 
-            if (seriesResult?.HasMetadata == true)
+            var hasMetadata = seriesResult?.HasMetadata == true;
+
+            if (hasMetadata)
             {
                 var series = seriesResult.Item;
 
@@ -88,14 +104,11 @@ namespace Emby.Plugins.AnimeKai.Providers.AniList
                 season.ProviderIds = series.ProviderIds;
             }
             else
-            {
-                // todo log series name here for easier reckoning
-                _logger.LogCallerWarning($"No Metadata found for Season: \"{info.Name}\" from Series (Id: {seriesId})");
-            }
+                _logger.LogCallerWarning($"No Metadata found for Season: \"{info.Name}\" from Series (Name: \"{info.SeriesName}\", Id: {seriesId})");
 
             return new MetadataResult<Season>
             {
-                HasMetadata = true,
+                HasMetadata = hasMetadata,
                 Item = season
             };
         }
