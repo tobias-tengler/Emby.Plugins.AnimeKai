@@ -54,7 +54,7 @@ namespace Emby.Plugins.AnimeKai.Providers.MyAnimeList
                 return new List<RemoteImageInfo>();
             }
 
-            _logger.LogCallerInfo($"Id: {id.ToString()}");
+            _logger.LogCallerInfo($"Id: {id}");
 
             var images = await _api.GetImagesFromIdAsync(id, cancellationToken).ConfigureAwait(false);
 

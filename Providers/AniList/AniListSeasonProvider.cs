@@ -45,8 +45,12 @@ namespace Emby.Plugins.AnimeKai.Providers.AniList
                 _logger.LogCallerInfo("Series Id: " + seriesId);
             if (!string.IsNullOrEmpty(info.SeriesName))
                 _logger.LogCallerInfo("Series Name: " + info.SeriesName);
+            if (info.IndexNumber > 0)
+                _logger.LogCallerInfo("Season Number: " + info.IndexNumber);
+            if (!string.IsNullOrEmpty(info.Name))
+                _logger.LogCallerInfo("Season Name: " + info.Name);
 
-            MetadataResult<Series> seriesResult = null;
+            MetadataResult<Series> seriesResult;
             var seriesInfo = new SeriesInfo();
 
             if (info.ProviderIds.TryGetValue(Name, out var seasonId))
@@ -72,8 +76,7 @@ namespace Emby.Plugins.AnimeKai.Providers.AniList
                 seriesResult = await _seriesProvider.GetMetadata(seriesInfo, cancellationToken).ConfigureAwait(false);
             }
 
-
-            string seasonName = null;
+            string seasonName;
 
             var nameMatch = Regex.Match(info.Name, @"\((.+)\)");
 
