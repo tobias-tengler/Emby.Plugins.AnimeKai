@@ -82,7 +82,7 @@ namespace Emby.Plugins.AnimeKai.Providers.AniList
             return new Dictionary<ImageType, string>
             {
                 { ImageType.Primary, media.CoverImage?.ExtraLarge },
-                { ImageType.Backdrop, media.BannerImage },
+                { ImageType.Banner, media.BannerImage },
             };
         }
 

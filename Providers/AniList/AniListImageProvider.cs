@@ -77,7 +77,7 @@ namespace Emby.Plugins.AnimeKai.Providers.AniList
                 results.Add(new RemoteImageInfo
                 {
                     Url = bannerPath,
-                    Type = ImageType.Backdrop,
+                    Type = ImageType.Banner,
                     ProviderName = Name
                 });
 
