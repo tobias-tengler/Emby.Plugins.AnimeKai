@@ -208,7 +208,7 @@ namespace Emby.Plugins.AnimeKai.Providers.MyAnimeList
             _logger.LogCallerInfo($"{nameof(media.Title)}: \"{media.Title}\"", caller);
 
             if (media.Genres?.Count > 0)
-                _logger.LogCallerInfo($"{nameof(media.Genres)}: \"{string.Join(",", media.Genres)}\"", caller);
+                _logger.LogCallerInfo($"{nameof(media.Genres)}: \"{string.Join(",", media.Genres.Select(i => i.Name))}\"", caller);
             else
                 _logger.LogCallerWarning($"No {nameof(media.Genres)} found", caller);
         }
