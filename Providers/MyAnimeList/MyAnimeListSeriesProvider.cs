@@ -179,7 +179,7 @@ namespace Emby.Plugins.AnimeKai.Providers.MyAnimeList
                 item.ProductionYear = startYear.Value;
             }
 
-            item.CommunityRating = media.Score / 10;
+            item.CommunityRating = media.Score;
 
             return item;
         }
