@@ -118,8 +118,6 @@ namespace Emby.Plugins.AnimeKai.Providers.AniList
 
         public async Task<IEnumerable<RemoteSearchResult>> GetSearchResults(SeasonInfo searchInfo, CancellationToken cancellationToken)
         {
-            _logger.LogCallerInfo($"{nameof(searchInfo.Name)}: \"{searchInfo.Name}\"");
-
             var results = await _seriesProvider.GetSearchResultsFromInfoAsync(searchInfo, _seriesProvider.SeriesFormats, cancellationToken).ConfigureAwait(false);
 
             return results.Select(_seriesProvider.GetSearchResultFromMedia);

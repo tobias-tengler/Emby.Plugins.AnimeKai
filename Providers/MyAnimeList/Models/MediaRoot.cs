@@ -16,6 +16,11 @@ namespace Emby.Plugins.AnimeKai.Providers.MyAnimeList
 
     public class MediaRoot
     {
+        public MediaRoot()
+        {
+            Genres = new List<Genre>();
+        }
+
         public int Mal_Id { get; set; }
         public string Title { get; set; }
         public string Image_Url { get; set; }

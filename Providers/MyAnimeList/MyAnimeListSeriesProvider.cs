@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using MediaBrowser.Common.Net;
@@ -9,28 +10,26 @@ using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Providers;
 using MediaBrowser.Model.Entities;
+using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Providers;
 using MediaBrowser.Model.Serialization;
-using Emby.Plugins.AnimeKai.Providers.MyAnimeList;
-using MediaBrowser.Model.Logging;
-using System.Runtime.CompilerServices;
 
-namespace Emby.Plugins.AnimeKai.Providers.AniList
+namespace Emby.Plugins.AnimeKai.Providers.MyAnimeList
 {
-    public class AniListSeriesProvider : IRemoteMetadataProvider<Series, SeriesInfo>, IRemoteMetadataProvider<Movie, MovieInfo>, IHasOrder
+    public class MyAnimeListSeriesProvider : IRemoteMetadataProvider<Series, SeriesInfo>, IRemoteMetadataProvider<Movie, MovieInfo>, IHasOrder
     {
         private readonly IHttpClient _httpClient;
-        private readonly AniListApi _api;
+        private readonly MyAnimeListApi _api;
         private readonly ILogger _logger;
 
-        public AniListSeriesProvider(IHttpClient httpClient, IJsonSerializer serializer, ILogManager logManager)
+        public MyAnimeListSeriesProvider(IHttpClient httpClient, IJsonSerializer serializer, ILogManager logManager)
         {
             _httpClient = httpClient;
-            _api = new AniListApi(httpClient, serializer, logManager);
+            _api = new MyAnimeListApi(httpClient, serializer, logManager);
             _logger = logManager.GetLogger(GetType().Name);
         }
 
-        public string Name => AniListExternalId.ProviderName;
+        public string Name => MyAnimeListExternalId.ProviderName;
 
         public int Order => 0;
 
@@ -46,7 +45,7 @@ namespace Emby.Plugins.AnimeKai.Providers.AniList
         #region Series
         public async Task<MetadataResult<Series>> GetMetadata(SeriesInfo info, CancellationToken cancellationToken)
         {
-            var results = await GetSearchResultsFromInfoAsync(info, SeriesFormats, cancellationToken).ConfigureAwait(false);
+            var results = await GetSearchResultsFromInfoAsync(info, "tv", cancellationToken).ConfigureAwait(false);
 
             var media = results?.FirstOrDefault();
 
@@ -60,9 +59,9 @@ namespace Emby.Plugins.AnimeKai.Providers.AniList
 
             var seriesItem = GetItemFromMedia<Series>(media);
 
-            seriesItem.Status = media.Status == "RELEASING" ? SeriesStatus.Continuing : SeriesStatus.Ended;
+            seriesItem.Status = media.Airing ? SeriesStatus.Continuing : SeriesStatus.Ended;
 
-            int? endYear = media.EndDate?.Year, endMonth = media.EndDate?.Month, endDay = media.EndDate?.Day;
+            int? endYear = media.Aired?.To.Year, endMonth = media.Aired?.To.Month, endDay = media.Aired?.To.Day;
 
             if (endYear.HasValue && endMonth.HasValue && endDay.HasValue)
                 seriesItem.EndDate = new DateTime(endYear.Value, endMonth.Value, endDay.Value);
@@ -76,7 +75,7 @@ namespace Emby.Plugins.AnimeKai.Providers.AniList
 
         public async Task<IEnumerable<RemoteSearchResult>> GetSearchResults(SeriesInfo searchInfo, CancellationToken cancellationToken)
         {
-            var results = await GetSearchResultsFromInfoAsync(searchInfo, SeriesFormats, cancellationToken).ConfigureAwait(false);
+            var results = await GetSearchResultsFromInfoAsync(searchInfo, "tv", cancellationToken).ConfigureAwait(false);
 
             return results.Select(GetSearchResultFromMedia);
         }
@@ -85,7 +84,7 @@ namespace Emby.Plugins.AnimeKai.Providers.AniList
         #region Movie
         public async Task<MetadataResult<Movie>> GetMetadata(MovieInfo info, CancellationToken cancellationToken)
         {
-            var results = await GetSearchResultsFromInfoAsync(info, MovieFormats, cancellationToken).ConfigureAwait(false);
+            var results = await GetSearchResultsFromInfoAsync(info, "movie", cancellationToken).ConfigureAwait(false);
 
             var media = results?.FirstOrDefault();
 
@@ -106,21 +105,18 @@ namespace Emby.Plugins.AnimeKai.Providers.AniList
 
         public async Task<IEnumerable<RemoteSearchResult>> GetSearchResults(MovieInfo searchInfo, CancellationToken cancellationToken)
         {
-            var results = await GetSearchResultsFromInfoAsync(searchInfo, MovieFormats, cancellationToken).ConfigureAwait(false);
+            var results = await GetSearchResultsFromInfoAsync(searchInfo, "movie", cancellationToken).ConfigureAwait(false);
 
             return results.Select(GetSearchResultFromMedia);
         }
         #endregion
 
         #region Helper
-        public readonly List<string> SeriesFormats = new List<string> { "TV", "TV_SHORT", "ONA" };
-        public readonly List<string> MovieFormats = new List<string> { "MOVIE" };
-
-        public async Task<List<Media>> GetSearchResultsFromInfoAsync(ItemLookupInfo info, IEnumerable<string> formats, CancellationToken cancellationToken)
+        public async Task<List<MediaRoot>> GetSearchResultsFromInfoAsync(ItemLookupInfo info, string format, CancellationToken cancellationToken)
         {
             if (info == null) throw new ArgumentNullException(nameof(info));
 
-            var results = new List<Media>();
+            var results = new List<MediaRoot>();
 
             if (info.ProviderIds != null && info.ProviderIds.TryGetValue(Name, out var rawId) && int.TryParse(rawId, out var id))
             {
@@ -142,7 +138,7 @@ namespace Emby.Plugins.AnimeKai.Providers.AniList
 
             if (!string.IsNullOrEmpty(info.Name))
             {
-                var searchResults = await _api.SearchAsync(info.Name, formats, cancellationToken).ConfigureAwait(false);
+                var searchResults = await _api.SearchAsync(info.Name, format, cancellationToken).ConfigureAwait(false);
 
                 if (searchResults?.Count > 0)
                 {
@@ -155,32 +151,27 @@ namespace Emby.Plugins.AnimeKai.Providers.AniList
             else
                 _logger.LogCallerWarning($"No {nameof(info.Name)} found");
 
-            return new List<Media>();
+            return results;
         }
 
-        private T GetItemFromMedia<T>(Media media) where T : BaseItem, new()
+        private T GetItemFromMedia<T>(MediaRoot media) where T : BaseItem, new()
         {
             if (media == null) throw new ArgumentNullException(nameof(media));
 
             var item = new T
             {
-                Name = media.Title?.Romaji,
-                Overview = Sanitizer.SanitizeDescription(media.Description),
+                Name = media.Title,
+                Overview = Sanitizer.SanitizeDescription(media.Synopsis),
                 ProviderIds = new Dictionary<string, string>
                 {
-                    { Name, media.Id.ToString() },
-                    { MyAnimeListExternalId.ProviderName, media.IdMal?.ToString() }
+                    { Name, media.Mal_Id.ToString() },
                 }
             };
 
             if (media.Genres?.Count > 0)
-                item.Genres = media.Genres.ToArray();
+                item.Genres = media.Genres.Select(i => i.Name).ToArray();
 
-            if (media.Studios?.Edges?.Count > 0)
-                item.Studios = media.Studios.Edges.Where(i => i.Node?.IsAnimationStudio == true)
-                                                  .Select(i => i.Node.Name).ToArray();
-
-            int? startYear = media.StartDate?.Year, startMonth = media.StartDate?.Month, startDay = media.StartDate?.Day;
+            int? startYear = media.Aired?.From.Year, startMonth = media.Aired?.From.Month, startDay = media.Aired?.From.Day;
 
             if (startYear.HasValue && startMonth.HasValue && startDay.HasValue)
             {
@@ -188,36 +179,33 @@ namespace Emby.Plugins.AnimeKai.Providers.AniList
                 item.ProductionYear = startYear.Value;
             }
 
-            if (media.AverageScore.HasValue)
-                item.CommunityRating = media.AverageScore / 10;
+            item.CommunityRating = media.Score / 10;
 
             return item;
         }
 
-        public RemoteSearchResult GetSearchResultFromMedia(Media media)
+        public RemoteSearchResult GetSearchResultFromMedia(MediaRoot media)
         {
             if (media == null) throw new ArgumentNullException(nameof(media));
 
             return new RemoteSearchResult
             {
                 SearchProviderName = Name,
-                Name = media.Title?.Romaji,
-                ImageUrl = media.CoverImage?.Large,
-                Overview = Sanitizer.SanitizeDescription(media.Description),
+                Name = media.Title,
+                ImageUrl = media.Image_Url,
+                Overview = Sanitizer.SanitizeDescription(media.Synopsis),
                 ProviderIds = new Dictionary<string, string>
                 {
-                    { Name, media.Id.ToString() },
-                    { MyAnimeListExternalId.ProviderName, media.IdMal?.ToString() }
+                    { Name, media.Mal_Id.ToString() }
                 }
             };
         }
 
-        private void LogMediaFound(Media media, [CallerMemberName] string caller = null)
+        private void LogMediaFound(MediaRoot media, [CallerMemberName] string caller = null)
         {
             _logger.LogCallerInfo($"Media found:", caller);
-            _logger.LogCallerInfo($"{nameof(media.Id)}: {media.Id}", caller);
-            _logger.LogCallerInfo($"{nameof(media.IdMal)}: {media.IdMal}", caller);
-            _logger.LogCallerInfo($"{nameof(media.Title)}: \"{media.Title?.Romaji}\"", caller);
+            _logger.LogCallerInfo($"{nameof(media.Mal_Id)}: {media.Mal_Id}", caller);
+            _logger.LogCallerInfo($"{nameof(media.Title)}: \"{media.Title}\"", caller);
 
             if (media.Genres?.Count > 0)
                 _logger.LogCallerInfo($"{nameof(media.Genres)}: \"{string.Join(",", media.Genres)}\"", caller);

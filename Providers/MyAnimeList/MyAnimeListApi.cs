@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using MediaBrowser.Common.Net;
@@ -20,18 +21,41 @@ namespace Emby.Plugins.AnimeKai.Providers.MyAnimeList
             _logger = logManager.GetLogger(GetType().Name);
         }
 
+        public async Task<List<MediaRoot>> SearchAsync(string name, string format, CancellationToken cancellationToken)
+        {
+            _logger.LogCallerInfo($"{nameof(name)}: \"{name}\"");
+            _logger.LogCallerInfo($"{nameof(format)}: \"{format}\"");
+
+            var result = await FetchDataAsync<SearchResultRoot>($"search/anime?q={name}&page=1&type={format}", cancellationToken).ConfigureAwait(false);
+
+            return result.Results?.Select(i => new MediaRoot
+            {
+                Mal_Id = i.Mal_Id,
+                Airing = i.Airing,
+                Image_Url = i.Image_Url,
+                Score = i.Score,
+                Synopsis = i.Synopsis,
+                Title = i.Title,
+                Aired = new Aired
+                {
+                    From = i.Start_Date,
+                    To = i.End_Date,
+                }
+            }).ToList();
+        }
+
         public Task<MediaRoot> GetFromIdAsync(int id, CancellationToken cancellationToken)
         {
             _logger.LogCallerInfo($"{nameof(id)}: {id}");
 
-            return FetchDataAsync<MediaRoot>(id.ToString(), cancellationToken);
+            return FetchDataAsync<MediaRoot>($"anime/{id}", cancellationToken);
         }
 
         public async Task<List<Picture>> GetImagesFromIdAsync(int id, CancellationToken cancellationToken)
         {
             _logger.LogCallerInfo($"{nameof(id)}: {id}");
 
-            var results = await FetchDataAsync<PictureRoot>($"{id}/pictures", cancellationToken).ConfigureAwait(false);
+            var results = await FetchDataAsync<PictureRoot>($"anime/{id}/pictures", cancellationToken).ConfigureAwait(false);
 
             return results?.Pictures;
         }
@@ -40,7 +64,7 @@ namespace Emby.Plugins.AnimeKai.Providers.MyAnimeList
         {
             var options = new HttpRequestOptions
             {
-                Url = $"https://api.jikan.moe/v3/anime/{endpoint}",
+                Url = $"https://api.jikan.moe/v3/{endpoint}",
                 TimeoutMs = 30000,
                 CancellationToken = cancellationToken,
                 DecompressionMethod = CompressionMethod.Gzip
