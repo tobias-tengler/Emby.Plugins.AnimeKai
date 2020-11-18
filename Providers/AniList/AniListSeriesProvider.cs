@@ -189,7 +189,7 @@ namespace Emby.Plugins.AnimeKai.Providers.AniList
             }
 
             if (media.AverageScore.HasValue)
-                item.CommunityRating = media.AverageScore / 10;
+                item.CommunityRating = (float)Math.Round(media.AverageScore.Value / 10, 1);
 
             return item;
         }
